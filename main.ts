@@ -25,14 +25,18 @@ class Node {
 	result: number;
 	indent: number;	
 
-	print() {
-		let out = ">>> " + this.source === "" ? "<root>" : this.source;
-		const delta = 30 - this.source.length;
-		for (let i=0; i < delta; i++) 
-			out = out + " ";
-		out = out + this.result.toString();
-		console.log(out);
-		this.children.map(n => n.print());
+	render(body) {
+		if (this.parent) {
+			const row = body.createEl("tr");
+			row.createEl("td", { text: this.source } );
+			row.createEl("td", { text: this.result.toLocaleString().toString() } );
+			this.children.map(n => n.render(body));	
+		} else {
+			this.children.map(n => n.render(body));	
+			const row = body.createEl("tr");
+			row.createEl("td", { text: this.source } );
+			row.createEl("td", { text: this.result.toLocaleString().toString() } );
+		}
 	}
 
 	constructor(source: string) {
@@ -68,14 +72,19 @@ class Node {
 		// strip "$"
 		for (let i = 0; i < last.length; i++) {
 			const ch = last.charAt(i);
-			if (ch !== "$") {
+			if (ch !== "$" && ch !== "_") {
 					expr = expr + ch;
 				}
 		}
 
 		this.expression = expr;
 		if (this.expression.length > 0 ) {
-			this.result = eval(this.expression);
+			try {
+				this.result = eval(this.expression);
+			} catch {
+				this.result = 0;
+			}
+			
 		}
 	}
 }
@@ -86,6 +95,9 @@ export default class MyPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 		this.registerMarkdownCodeBlockProcessor("sigma", (source, el, ctx) => {
+			const table = el.createEl("table");
+			const body = table.createEl("tbody");
+
 			let root = new Node("");
 			let currentNode = root;
 			const rows = source.split("\n").filter((row) => row.length > 0);
@@ -103,7 +115,7 @@ export default class MyPlugin extends Plugin {
 				currentNode = node;
 			}
 		
-			root.print();
+			root.render(body);
 
 		});
 
