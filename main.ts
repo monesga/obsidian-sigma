@@ -26,7 +26,7 @@ class Node {
 	indent: number;	
 
 	print() {
-		let out = ">>> " + this.source;
+		let out = ">>> " + this.source === "" ? "<root>" : this.source;
 		const delta = 30 - this.source.length;
 		for (let i=0; i < delta; i++) 
 			out = out + " ";
@@ -36,12 +36,16 @@ class Node {
 	}
 
 	constructor(source: string) {
-		console.log("constructing: " + source);
 		this.source = source;
 		this.indent = 0;
 		this.children = new Array<Node>;
 		this.parent = null;
 		this.result = 0;
+
+		if (source === "") {
+			this.indent = -1;
+			return;
+		}
 
 		// compute leading indent
 		for(let i = 0; i < source.length; i++) {
@@ -84,17 +88,18 @@ export default class MyPlugin extends Plugin {
 		this.registerMarkdownCodeBlockProcessor("sigma", (source, el, ctx) => {
 			let root = new Node("");
 			let currentNode = root;
-			let currentIndent = -1;
 			const rows = source.split("\n").filter((row) => row.length > 0);
 			for (let i = 0; i < rows.length; i++) {
 				const row = rows[i];
 				const node = new Node(row);
-				if (node.indent <= currentIndent) {
+				if (node.indent <= currentNode.indent) {
 					node.parent = currentNode.parent;
 				} else {
 					node.parent = currentNode;
 				}
 				node.parent.children.push(node);
+				if (node.parent)
+					node.parent.result = node.parent.result + node.result;
 				currentNode = node;
 			}
 		
