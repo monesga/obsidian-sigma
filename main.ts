@@ -34,16 +34,16 @@ export default class MyPlugin extends Plugin {
 		  });
 
 		// This creates an icon in the left ribbon.
-		const ribbonIconEl = this.addRibbonIcon('plus-minus-glyph', 'Solver', (evt: MouseEvent) => {
+		const ribbonIconEl = this.addRibbonIcon('plus-minus-glyph', 'Sigma', (evt: MouseEvent) => {
 			// Called when the user clicks the icon.
-			new Notice('This is a Solver!');
+			new Notice('This is a Sigma!');
 		});
 		// Perform additional things with the ribbon
 		ribbonIconEl.addClass('my-plugin-ribbon-class');
 
 		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
 		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Solver Active');
+		statusBarItemEl.setText('Sigma Active');
 
 		// This adds a simple command that can be triggered anywhere
 		this.addCommand({

@@ -1,10 +1,10 @@
 {
-	"id": "obsidian-solver",
-	"name": "Obsidian Solver",
+	"id": "obsidian-sigma",
+	"name": "Obsidian Sigma",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
 	"description": "A plugin to enable using obsidian notes as calculation sheets.",
 	"author": "Velentir",
-	"authorUrl": "https://github.com/velentir/obsidian-solver",
+	"authorUrl": "https://github.com/velentir/obsidian-sigma",
 	"isDesktopOnly": false
 }
