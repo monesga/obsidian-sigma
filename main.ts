@@ -10,11 +10,98 @@ const DEFAULT_SETTINGS: MyPluginSettings = {
 	mySetting: 'default'
 }
 
+const zero = "0".charCodeAt(0);
+const nine = "9".charCodeAt(0);
+const next = (str: String, idx: number): String => {
+	if (idx >= str.length - 1) return "";
+	return str[idx + 1];
+}
+
+class Node {
+	children: Node[];
+	parent: Node | null;
+	source: string;
+	expression: string;
+	result: number;
+	indent: number;	
+
+	print() {
+		let out = ">>> " + this.source;
+		const delta = 30 - this.source.length;
+		for (let i=0; i < delta; i++) 
+			out = out + " ";
+		out = out + this.result.toString();
+		console.log(out);
+		this.children.map(n => n.print());
+	}
+
+	constructor(source: string) {
+		console.log("constructing: " + source);
+		this.source = source;
+		this.indent = 0;
+		this.children = new Array<Node>;
+		this.parent = null;
+		this.result = 0;
+
+		// compute leading indent
+		for(let i = 0; i < source.length; i++) {
+			if (source.charAt(i) == ' ') 
+				this.indent = this.indent + 1;
+			else 
+				break;
+		}
+
+		// split to words
+		const words = source.split(' ');
+
+		// only one word, we're done
+		if (words.length <= 1) return;
+
+		// find last word
+		const last = words[words.length-1];
+		let expr = "";
+
+		// strip "$"
+		for (let i = 0; i < last.length; i++) {
+			const ch = last.charAt(i);
+			if (ch !== "$") {
+					expr = expr + ch;
+				}
+		}
+
+		this.expression = expr;
+		if (this.expression.length > 0 ) {
+			this.result = eval(this.expression);
+		}
+	}
+}
+
 export default class MyPlugin extends Plugin {
 	settings: MyPluginSettings;
 
 	async onload() {
 		await this.loadSettings();
+		this.registerMarkdownCodeBlockProcessor("sigma", (source, el, ctx) => {
+			let root = new Node("");
+			let currentNode = root;
+			let currentIndent = -1;
+			const rows = source.split("\n").filter((row) => row.length > 0);
+			for (let i = 0; i < rows.length; i++) {
+				const row = rows[i];
+				const node = new Node(row);
+				if (node.indent <= currentIndent) {
+					node.parent = currentNode.parent;
+				} else {
+					node.parent = currentNode;
+				}
+				node.parent.children.push(node);
+				currentNode = node;
+			}
+		
+			root.print();
+
+		});
+
 
 		this.registerMarkdownCodeBlockProcessor("csv", (source, el, ctx) => {
 			const rows = source.split("\n").filter((row) => row.length > 0);
