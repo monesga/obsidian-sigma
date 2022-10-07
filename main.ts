@@ -10,13 +10,6 @@ const DEFAULT_SETTINGS: MyPluginSettings = {
 	mySetting: 'default'
 }
 
-const zero = "0".charCodeAt(0);
-const nine = "9".charCodeAt(0);
-const next = (str: String, idx: number): String => {
-	if (idx >= str.length - 1) return "";
-	return str[idx + 1];
-}
-
 class Node {
 	children: Node[];
 	parent: Node | null;
@@ -24,18 +17,32 @@ class Node {
 	expression: string;
 	result: number;
 	indent: number;	
+	has$: boolean;
 
-	render(body) {
+	update() : number {
+		this.result = this.children.reduce((prev, node) => prev + node.update(), this.result);
+		return this.result;
+	}
+
+	resultString(): string {
+		return `${this.has$ ? "$" : ""}${this.result.toLocaleString().toString()}`;
+		
+	}
+
+	selfRender(row: any) {
+		row.createEl("td", { text: this.source } );
+		row.createEl("td", { text: this.resultString() } );
+	}
+
+	render(body: any) {
 		if (this.parent) {
 			const row = body.createEl("tr");
-			row.createEl("td", { text: this.source } );
-			row.createEl("td", { text: this.result.toLocaleString().toString() } );
+			this.selfRender(row);
 			this.children.map(n => n.render(body));	
 		} else {
 			this.children.map(n => n.render(body));	
 			const row = body.createEl("tr");
-			row.createEl("td", { text: this.source } );
-			row.createEl("td", { text: this.result.toLocaleString().toString() } );
+			this.selfRender(row);
 		}
 	}
 
@@ -45,9 +52,11 @@ class Node {
 		this.children = new Array<Node>;
 		this.parent = null;
 		this.result = 0;
+		this.has$ = false;
 
 		if (source === "") {
 			this.indent = -1;
+			this.source = "Total";
 			return;
 		}
 
@@ -63,7 +72,7 @@ class Node {
 		const words = source.split(' ');
 
 		// only one word, we're done
-		if (words.length <= 1) return;
+		if (words.length <= 0) return;
 
 		// find last word
 		const last = words[words.length-1];
@@ -72,6 +81,7 @@ class Node {
 		// strip "$"
 		for (let i = 0; i < last.length; i++) {
 			const ch = last.charAt(i);
+			if (ch === "$") this.has$ = true;
 			if (ch !== "$" && ch !== "_") {
 					expr = expr + ch;
 				}
@@ -105,17 +115,24 @@ export default class MyPlugin extends Plugin {
 				const row = rows[i];
 				const node = new Node(row);
 				if (node.indent <= currentNode.indent) {
-					node.parent = currentNode.parent;
+					// find closest parent with indent < node.indent
+					let par: Node | null = null;
+					for (par = currentNode.parent; par?.indent >= node.indent; par = par?.parent);
+					node.parent = par;
 				} else {
 					node.parent = currentNode;
 				}
 				node.parent.children.push(node);
 				if (node.parent)
-					node.parent.result = node.parent.result + node.result;
+					node.parent.has$ = node.has$;
 				currentNode = node;
 			}
-		
-			root.render(body);
+
+			root.update();
+			if (root.children.length === 1)
+				root.children[0].render(body);
+			else 
+				root.render(body);
 
 		});
 
