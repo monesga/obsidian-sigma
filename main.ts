@@ -1,14 +1,99 @@
+import { match } from 'assert';
 import { App, Notice, Plugin, PluginSettingTab, setIcon, Setting } from 'obsidian';
 
-// Remember to rename these classes and interfaces!
 
-interface MyPluginSettings {
-	mySetting: string;
+////////////////////////////////////////////////// Scanner //////////////////////////////////////////////
+enum TokenType { LPar, RPar, Comma, Dot,  Minus, Plus, Star, Slash, Semi, Equal, Ident, Num, Str, End }
+class Token { 
+	type: TokenType;
+	lexeme: string;
+	literal: any;
+	line: number;
+
+	constructor(type: TokenType, lexeme: string, literal: any, line: number) {
+		this.type = type;
+		this.lexeme = lexeme;
+		this.literal = literal;
+		this.line = line;
+	}
+
+	toString(): string {
+		return this.type + " " + this.lexeme + " " + this.literal;
+	}
 }
 
-const DEFAULT_SETTINGS: MyPluginSettings = {
-	mySetting: 'default'
+class Scanner {
+	source: string;
+	tokens: Token[] = [];
+	start: number = 0;
+	current: number = 0;
+	line: number = 1;
+	errors: string[] = [];
+
+	constructor(source: string) {
+		this.source = source;
+	}
+
+	scanTokens(): Token[] {
+		while (!this.isAtEnd()) {
+			this.start = this.current;
+			this.scanToken();
+		}
+		this.tokens.push(new Token(TokenType.End, "", null, this.line));
+		return this.tokens;
+	}
+
+	isAtEnd(): boolean {
+		return this.current >= this.source.length;
+	}
+
+	scanToken() {
+		let c: string = this.advance();
+		switch (c) {
+			case "(": this.addToken(TokenType.LPar); break;
+			case ")": this.addToken(TokenType.RPar); break;
+			case ",": this.addToken(TokenType.Comma); break;
+			case ".": this.addToken(TokenType.Dot); break;
+			case "+": this.addToken(TokenType.Plus); break;
+			case "-": this.addToken(TokenType.Minus); break;
+			case "/": this.addToken(TokenType.Slash); break;
+			case "*": this.addToken(TokenType.Star); break;
+			case ";": this.addToken(TokenType.Semi); break;
+			case "=": this.addToken(TokenType.Equal); break;
+			case " ": 
+			case "\t": 
+			case "\r": break;
+			case "\n":  this.line++; break;
+			default: this.errors.push(`${this.line} unexpected character.`);
+		}
+	}
+
+	advance(): string {
+		return this.source.charAt(this.current++);
+	}
+
+	addToken(type: TokenType) {
+		this.addTokenX(type, null);
+	}
+
+	addTokenX(type: TokenType, literal: any) {
+		const text = this.source.substring(this.start, this.current);
+		this.tokens.push(new Token(type, text, literal, this.line));
+	}
+
+	match(expected: string): boolean {
+		if (this.isAtEnd()) return false;
+		if (this.source.charAt(this.current) != expected) return false;
+		this.current++;
+		return true;
+	}
+
+	peek(expected: string): string {
+		if (this.isAtEnd()) return "\0";
+		return this.source.charAt(this.current);
+	}
 }
+
 
 class Line {
 	children: Line[];
@@ -34,7 +119,7 @@ class Line {
 		row.createEl("td", { text: this.resultString() } );
 	}
 
-	render(body: any) {
+	render(body: any): void {
 		if (this.parent) {
 			const row = body.createEl("tr");
 			this.selfRender(row);
@@ -99,8 +184,18 @@ class Line {
 	}
 }
 
-export default class MyPlugin extends Plugin {
-	settings: MyPluginSettings;
+
+interface SigmaPluginSettings {
+	mySetting: string;
+}
+
+const DEFAULT_SETTINGS: SigmaPluginSettings = {
+	mySetting: 'default'
+}
+
+
+export default class SigmaPlugin extends Plugin {
+	settings: SigmaPluginSettings;
 
 	async onload() {
 		await this.loadSettings();
@@ -141,7 +236,7 @@ export default class MyPlugin extends Plugin {
 		// statusBarItemEl.setText('Σ');
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
+		this.addSettingTab(new SigmaSettingsTab(this.app, this));
 	}
 
 	onunload() {
@@ -157,10 +252,10 @@ export default class MyPlugin extends Plugin {
 	}
 }
 
-class SampleSettingTab extends PluginSettingTab {
-	plugin: MyPlugin;
+class SigmaSettingsTab extends PluginSettingTab {
+	plugin: SigmaPlugin;
 
-	constructor(app: App, plugin: MyPlugin) {
+	constructor(app: App, plugin: SigmaPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
