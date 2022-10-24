@@ -65,8 +65,24 @@ class Scanner {
 			case "\t": 
 			case "\r": break;
 			case "\n":  this.line++; break;
+			case "'": this.scanString(); break;
 			default: this.errors.push(`${this.line} unexpected character.`);
 		}
+	}
+
+	scanString() {
+		while (this.peek() != "'" && !this.isAtEnd()) {
+			if (this.peek() == "\n") this.line++;
+			this.advance();
+		}
+
+		if (this.isAtEnd()) {
+			this.errors.push(`${this.line} unterminated string.`);
+			return;
+		}
+		this.advance();
+		const value = this.source.substring(this.start+1, this.current-1);
+		this.addTokenX(TokenType.Str, value);
 	}
 
 	advance(): string {
@@ -89,7 +105,7 @@ class Scanner {
 		return true;
 	}
 
-	peek(expected: string): string {
+	peek(): string {
 		if (this.isAtEnd()) return "\0";
 		return this.source.charAt(this.current);
 	}
