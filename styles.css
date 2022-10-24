@@ -6,3 +6,30 @@ available in the app when your plugin is enabled.
 If your plugin does not need CSS, delete this file.
 
 */
+
+.identifier {
+  color: green;
+  font-family: 'Menlo', monospace;
+}
+
+.number {
+  color: blue;
+  font-family: 'Menlo', monospace;
+}
+
+.punctuator {
+  color: red;
+  font-family: 'Menlo', monospace;
+}
+
+.string {
+  color: blueviolet;
+  font-family: 'Menlo', monospace;
+}
+
+.line_number {
+  color: lightgray;
+  font-family: 'Menlo', monospace;
+  display: inline;
+  white-space: pre;
+}

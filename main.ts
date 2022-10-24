@@ -2,6 +2,7 @@ import { match } from 'assert';
 import { App, Notice, Plugin, PluginSettingTab, setIcon, Setting } from 'obsidian';
 
 
+
 ////////////////////////////////////////////////// Scanner //////////////////////////////////////////////
 enum TokenType { LPar, RPar, Comma, Dot,  Minus, Plus, Star, Slash, Semi, Equal, Ident, Num, Str, End }
 const TokenTypeNames = [ "LPar", "RPar", "Comma", "Dot",  "Minus", "Plus", "Star", "Slash", "Semi", "Equal", "Ident", "Num", "Str", "End" ];
@@ -23,6 +24,8 @@ class Token {
 	}
 }
 
+// TODO: Indent/Detent tokens
+// TODO: inline scanner error display
 class Scanner {
 	source: string;
 	tokens: Token[] = [];
@@ -83,7 +86,7 @@ class Scanner {
 			case "\n":  this.line++; break;
 			case "'": this.scanString(); break;
 			default: 
-				if (this.isDigit(c)) {
+				if (this.isDigit(c) || c == "$") {
 					this.scanNumber();
 				} else if (this.isAlphaNum(c)) {
 					this.scanWord();
@@ -151,6 +154,46 @@ class Scanner {
 	peek(): string {
 		if (this.isAtEnd()) return "\0";
 		return this.source.charAt(this.current);
+	}
+
+	pad(str: string, width: number): string {
+		let delta = width - str.length;
+		if (delta <= 0) return str;
+		let ret = str;
+		while (delta >= 0) {
+			ret = " " + ret;
+			delta--;
+		}
+		return ret + " ";
+	}
+
+	render(el: any) {
+		const pre = el.createEl("pre");
+		let line = 1;
+		let renderedLine = 0;
+		for (const i in this.tokens) {			
+			const t = this.tokens[i];
+			while (t.line > line) {
+				el.createEl("div", { text: "\n" });
+				line++;
+			}
+
+			if (t.line != renderedLine) {
+				el.createEl("span", { text: `${this.pad(line.toString(),3)}`, cls: "line_number"});
+				renderedLine = line;
+			}
+
+			if (t.type == TokenType.Ident) {
+				el.createEl("span", { text: t.lexeme, cls: "identifier"});
+			} else if (t.type == TokenType.Num) {
+				el.createEl("span", { text: t.lexeme, cls: "number"});
+			} else if (t.type == TokenType.Str) {
+				el.createEl("span", { text: t.lexeme, cls: "string"});
+			} else {
+				el.createEl("span", { text: t.lexeme, cls: "punctuator"});
+			}
+			el.createEl("span", { text: " " });
+		}
 	}
 }
 
@@ -262,9 +305,11 @@ export default class SigmaPlugin extends Plugin {
 	settings: SigmaPluginSettings;
 
 	process(source: string, root: any) {
-		const pre = root.createEl("pre");
 		const scanner = new Scanner(source);
 		scanner.scanTokens();
+		scanner.render(root);
+		return;
+		const pre = root.createEl("pre");
 		if (scanner.errors.length > 0) {
 			for (const e in scanner.errors) {
 				const text = scanner.errors[e];
