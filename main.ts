@@ -4,8 +4,8 @@ import { App, Notice, Plugin, PluginSettingTab, setIcon, Setting } from 'obsidia
 
 
 ////////////////////////////////////////////////// Scanner //////////////////////////////////////////////
-enum TokenType { LPar, RPar, Comma, Dot,  Minus, Plus, Star, Slash, Semi, Equal, Ident, Num, Str, End }
-const TokenTypeNames = [ "LPar", "RPar", "Comma", "Dot",  "Minus", "Plus", "Star", "Slash", "Semi", "Equal", "Ident", "Num", "Str", "End" ];
+enum TokenType { LPar, RPar, Comma, Dot,  Minus, Plus, Star, Slash, Semi, Equal, Ident, Num, Str, Ind, Det, End }
+const TokenTypeNames = [ "LPar", "RPar", "Comma", "Dot",  "Minus", "Plus", "Star", "Slash", "Semi", "Equal", "Ident", "Num", "Str", ">>", "<<", "End" ];
 class Token { 
 	type: TokenType;
 	lexeme: string;
@@ -24,8 +24,6 @@ class Token {
 	}
 }
 
-// TODO: Indent/Detent tokens
-// TODO: fix empty lines not showing
 class Scanner {
 	source: string;
 	tokens: Token[] = [];
@@ -33,13 +31,35 @@ class Scanner {
 	current: number = 0;
 	line: number = 1;
 	errors = new Map<number, string>();
+	isStart = false;
+
 
 	constructor(source: string) {
 		this.source = source;
 	}
 
 	scanTokens(): Token[] {
+		let currentIndent = 0;
+
 		while (!this.isAtEnd()) {
+			if (this.isStart) {
+				this.isStart = false;
+				let indent = 0;
+				while(this.peek() == " ") {
+					indent++;
+					this.advance();
+				}
+
+				if (indent > currentIndent && indent != 0) {
+					this.tokens.push(new Token(TokenType.Ind, "", currentIndent+1, this.line));
+				} else if (indent < currentIndent && currentIndent > 0) {
+					this.tokens.push(new Token(TokenType.Det, "", currentIndent-1, this.line));
+				} if (indent == currentIndent && indent != 0) {
+					this.tokens.push(new Token(TokenType.Ind, "", currentIndent, this.line));
+				}
+				currentIndent = indent;
+			}
+			
 			this.start = this.current;
 			this.scanToken();
 		}
@@ -83,7 +103,7 @@ class Scanner {
 			case " ": 
 			case "\t": 
 			case "\r": break;
-			case "\n":  this.line++; break;
+			case "\n":  this.line++; this.isStart = true; break;
 			case "'": this.scanString(); break;
 			default: 
 				if (this.isDigit(c) || c == "$") {
@@ -189,6 +209,12 @@ class Scanner {
 				el.createEl("span", { text: t.lexeme, cls: "number"});
 			} else if (t.type == TokenType.Str) {
 				el.createEl("span", { text: t.lexeme, cls: "string"});
+			} else if (t.type == TokenType.Ind) {
+				const s = this.pad("", t.literal);
+				el.createEl("span", { text: s, cls: "line_number"});
+			} else  if (t.type == TokenType.Det) {
+				const s = this.pad("", t.literal);
+				el.createEl("span", { text: s, cls: "line_number"});
 			} else {
 				el.createEl("span", { text: t.lexeme, cls: "punctuator"});
 			}
