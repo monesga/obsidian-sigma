@@ -54,6 +54,16 @@ class Scanner {
 		return ch >= "0" && ch <= "9";
 	}
 
+	isAlpha(str: string): boolean {
+		if (str.length < 1) return false;
+		const ch = str[0];
+		return ((ch >= "a" && ch <= "z") || (ch >= "A" && ch <= "Z") || ch == "_");
+	}
+
+	isAlphaNum(str: string) : boolean {
+		return this.isAlpha(str) || this.isDigit(str);
+	}
+
 	scanToken() {
 		let c: string = this.advance();
 		switch (c) {
@@ -75,10 +85,18 @@ class Scanner {
 			default: 
 				if (this.isDigit(c)) {
 					this.scanNumber();
-				} else {
+				} else if (this.isAlphaNum(c)) {
+					this.scanWord();
+				}
+				else {
 					this.errors.push(`${this.line} unexpected character.`);
 			}
 		}
+	}
+
+	scanWord() {
+		while(this.isAlphaNum(this.peek())) this.advance();
+		this.addToken(TokenType.Ident);
 	}
 
 	scanNumber() {
