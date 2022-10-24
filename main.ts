@@ -169,22 +169,18 @@ class Scanner {
 
 	render(el: any) {
 		const pre = el.createEl("pre");
-		let line = 1;
-		let renderedLine = 0;
+		let line = 0;
 		for (const i in this.tokens) {			
 			const t = this.tokens[i];
 
 			if (t.line != line && this.errors.has(t.line)) {
 				el.createEl("div", { text: this.errors.get(t.line), cls: "scan_error"});
 			}
+
 			while (t.line > line) {
 				el.createEl("div", { text: "\n" });
+				el.createEl("span", { text: `${this.pad((line+1).toString(),3)}`, cls: "line_number"});
 				line++;
-			}
-
-			if (t.line != renderedLine) {
-				el.createEl("span", { text: `${this.pad(line.toString(),3)}`, cls: "line_number"});
-				renderedLine = line;
 			}
 
 			if (t.type == TokenType.Ident) {
