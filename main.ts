@@ -4,6 +4,7 @@ import { App, Notice, Plugin, PluginSettingTab, setIcon, Setting } from 'obsidia
 
 ////////////////////////////////////////////////// Scanner //////////////////////////////////////////////
 enum TokenType { LPar, RPar, Comma, Dot,  Minus, Plus, Star, Slash, Semi, Equal, Ident, Num, Str, End }
+const TokenTypeNames = [ "LPar", "RPar", "Comma", "Dot",  "Minus", "Plus", "Star", "Slash", "Semi", "Equal", "Ident", "Num", "Str", "End" ];
 class Token { 
 	type: TokenType;
 	lexeme: string;
@@ -18,7 +19,7 @@ class Token {
 	}
 
 	toString(): string {
-		return this.type + " " + this.lexeme + " " + this.literal;
+		return `${this.line} [${TokenTypeNames[this.type]}] ${this.lexeme} ${this.literal}`;
 	}
 }
 
@@ -201,9 +202,28 @@ const DEFAULT_SETTINGS: SigmaPluginSettings = {
 export default class SigmaPlugin extends Plugin {
 	settings: SigmaPluginSettings;
 
+	process(source: string, root: any) {
+		const pre = root.createEl("pre");
+		const scanner = new Scanner(source);
+		scanner.scanTokens();
+		if (scanner.errors.length > 0) {
+			for (const e in scanner.errors) {
+				const text = scanner.errors[e];
+				pre.createEl("div", { text: text});
+			}
+		} else {
+			for (const t in scanner.tokens) {
+				const text = scanner.tokens[t].toString(); 
+				pre.createEl("div", { text: text});
+			}
+		}
+	}
+
 	async onload() {
 		await this.loadSettings();
 		this.registerMarkdownCodeBlockProcessor("sigma", (source, el, ctx) => {
+			this.process(source, el);
+			return;
 			const table = el.createEl("table");
 			const body = table.createEl("tbody");
 
