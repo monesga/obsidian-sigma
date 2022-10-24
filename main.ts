@@ -48,6 +48,12 @@ class Scanner {
 		return this.current >= this.source.length;
 	}
 
+	isDigit(str: string): boolean {
+		if (str.length < 1) return false;
+		const ch = str[0];
+		return ch >= "0" && ch <= "9";
+	}
+
 	scanToken() {
 		let c: string = this.advance();
 		switch (c) {
@@ -66,8 +72,27 @@ class Scanner {
 			case "\r": break;
 			case "\n":  this.line++; break;
 			case "'": this.scanString(); break;
-			default: this.errors.push(`${this.line} unexpected character.`);
+			default: 
+				if (this.isDigit(c)) {
+					this.scanNumber();
+				} else {
+					this.errors.push(`${this.line} unexpected character.`);
+			}
 		}
+	}
+
+	scanNumber() {
+		while (this.isDigit(this.peek())) this.advance();
+		if (this.peek() == "." && this.isDigit(this.peekNext())) {
+			this.advance();
+			while(this.isDigit(this.peek())) this.advance();
+		}
+		this.addTokenX(TokenType.Num, parseFloat(this.source.substring(this.start, this.current)));
+	}
+
+	peekNext(): string {
+		if (this.current + 1 >= this.source.length) return "\0";
+		return this.source.charAt(this.current + 1);
 	}
 
 	scanString() {
