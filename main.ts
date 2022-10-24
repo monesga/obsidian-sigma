@@ -25,14 +25,14 @@ class Token {
 }
 
 // TODO: Indent/Detent tokens
-// TODO: inline scanner error display
+// TODO: fix empty lines not showing
 class Scanner {
 	source: string;
 	tokens: Token[] = [];
 	start: number = 0;
 	current: number = 0;
 	line: number = 1;
-	errors: string[] = [];
+	errors = new Map<number, string>();
 
 	constructor(source: string) {
 		this.source = source;
@@ -92,7 +92,7 @@ class Scanner {
 					this.scanWord();
 				}
 				else {
-					this.errors.push(`${this.line} unexpected character.`);
+					this.errors.set(this.line, `unexpected character '${c}'`);
 			}
 		}
 	}
@@ -123,7 +123,7 @@ class Scanner {
 		}
 
 		if (this.isAtEnd()) {
-			this.errors.push(`${this.line} unterminated string.`);
+			this.errors.set(this.line, "unterminated string");
 			return;
 		}
 		this.advance();
@@ -173,6 +173,10 @@ class Scanner {
 		let renderedLine = 0;
 		for (const i in this.tokens) {			
 			const t = this.tokens[i];
+
+			if (t.line != line && this.errors.has(t.line)) {
+				el.createEl("div", { text: this.errors.get(t.line), cls: "scan_error"});
+			}
 			while (t.line > line) {
 				el.createEl("div", { text: "\n" });
 				line++;

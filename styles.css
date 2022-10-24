@@ -18,7 +18,7 @@ If your plugin does not need CSS, delete this file.
 }
 
 .punctuator {
-  color: red;
+  color: darkred;
   font-family: 'Menlo', monospace;
 }
 
@@ -33,3 +33,9 @@ If your plugin does not need CSS, delete this file.
   display: inline;
   white-space: pre;
 }
+
+.scan_error {
+  color: red;
+  font-family: 'Menlo', monospace;
+}
+
