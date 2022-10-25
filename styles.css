@@ -10,32 +10,45 @@ If your plugin does not need CSS, delete this file.
 .identifier {
   color: green;
   font-family: 'Menlo', monospace;
+  font-size: smaller;
 }
 
 .number {
   color: blue;
   font-family: 'Menlo', monospace;
+  font-size: smaller;
 }
 
 .punctuator {
   color: darkred;
   font-family: 'Menlo', monospace;
+  font-size: smaller;
 }
 
 .string {
   color: blueviolet;
   font-family: 'Menlo', monospace;
+  font-size: smaller;
 }
 
 .line_number {
   color: lightgray;
   font-family: 'Menlo', monospace;
+  font-size: small;
   display: inline;
   white-space: pre;
+}
+
+.result {
+  color: grey;
+  font-family: 'Menlo', monospace;
+  font-size: smaller;
+  display: inline;
 }
 
 .scan_error {
   color: red;
   font-family: 'Menlo', monospace;
+  font-size: smaller;
 }
 

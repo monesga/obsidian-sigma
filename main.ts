@@ -2,25 +2,19 @@ import { match } from 'assert';
 import { App, Notice, Plugin, PluginSettingTab, setIcon, Setting } from 'obsidian';
 
 
+// TODO: remove multi-line scanning, keep existing outline approach and table output
 
 ////////////////////////////////////////////////// Scanner //////////////////////////////////////////////
-enum TokenType { LPar, RPar, Comma, Dot,  Minus, Plus, Star, Slash, Semi, Equal, Ident, Num, Str, Ind, Det, End }
-const TokenTypeNames = [ "LPar", "RPar", "Comma", "Dot",  "Minus", "Plus", "Star", "Slash", "Semi", "Equal", "Ident", "Num", "Str", ">>", "<<", "End" ];
+enum TokenType { LPar, RPar, Comma, Dot,  Minus, Plus, Star, Slash, Semi, Equal, Ident, Num, Str, End }
 class Token { 
 	type: TokenType;
 	lexeme: string;
 	literal: any;
-	line: number;
 
-	constructor(type: TokenType, lexeme: string, literal: any, line: number) {
+	constructor(type: TokenType, lexeme: string, literal: any) {
 		this.type = type;
 		this.lexeme = lexeme;
 		this.literal = literal;
-		this.line = line;
-	}
-
-	toString(): string {
-		return `${this.line} [${TokenTypeNames[this.type]}] ${this.lexeme} ${this.literal}`;
 	}
 }
 
@@ -29,9 +23,7 @@ class Scanner {
 	tokens: Token[] = [];
 	start: number = 0;
 	current: number = 0;
-	line: number = 1;
-	errors = new Map<number, string>();
-	isStart = false;
+	error: string = "";
 
 
 	constructor(source: string) {
@@ -39,31 +31,12 @@ class Scanner {
 	}
 
 	scanTokens(): Token[] {
-		let currentIndent = 0;
 
 		while (!this.isAtEnd()) {
-			if (this.isStart) {
-				this.isStart = false;
-				let indent = 0;
-				while(this.peek() == " ") {
-					indent++;
-					this.advance();
-				}
-
-				if (indent > currentIndent && indent != 0) {
-					this.tokens.push(new Token(TokenType.Ind, "", currentIndent+1, this.line));
-				} else if (indent < currentIndent && currentIndent > 0) {
-					this.tokens.push(new Token(TokenType.Det, "", currentIndent-1, this.line));
-				} if (indent == currentIndent && indent != 0) {
-					this.tokens.push(new Token(TokenType.Ind, "", currentIndent, this.line));
-				}
-				currentIndent = indent;
-			}
-			
 			this.start = this.current;
 			this.scanToken();
 		}
-		this.tokens.push(new Token(TokenType.End, "", null, this.line));
+		this.tokens.push(new Token(TokenType.End, "", null));
 		return this.tokens;
 	}
 
@@ -103,7 +76,6 @@ class Scanner {
 			case " ": 
 			case "\t": 
 			case "\r": break;
-			case "\n":  this.line++; this.isStart = true; break;
 			case "'": this.scanString(); break;
 			default: 
 				if (this.isDigit(c) || c == "$") {
@@ -112,7 +84,7 @@ class Scanner {
 					this.scanWord();
 				}
 				else {
-					this.errors.set(this.line, `unexpected character '${c}'`);
+					this.error = `unexpected character '${c}'`;
 			}
 		}
 	}
@@ -138,12 +110,11 @@ class Scanner {
 
 	scanString() {
 		while (this.peek() != "'" && !this.isAtEnd()) {
-			if (this.peek() == "\n") this.line++;
 			this.advance();
 		}
 
 		if (this.isAtEnd()) {
-			this.errors.set(this.line, "unterminated string");
+			this.error = "unterminated string";
 			return;
 		}
 		this.advance();
@@ -161,7 +132,7 @@ class Scanner {
 
 	addTokenX(type: TokenType, literal: any) {
 		const text = this.source.substring(this.start, this.current);
-		this.tokens.push(new Token(type, text, literal, this.line));
+		this.tokens.push(new Token(type, text, literal));
 	}
 
 	match(expected: string): boolean {
@@ -176,31 +147,13 @@ class Scanner {
 		return this.source.charAt(this.current);
 	}
 
-	pad(str: string, width: number): string {
-		let delta = width - str.length;
-		if (delta <= 0) return str;
-		let ret = str;
-		while (delta >= 0) {
-			ret = " " + ret;
-			delta--;
-		}
-		return ret + " ";
-	}
-
 	render(el: any) {
-		const pre = el.createEl("pre");
-		let line = 0;
+		const pre = el.createEl("span");
 		for (const i in this.tokens) {			
 			const t = this.tokens[i];
 
-			if (t.line != line && this.errors.has(t.line)) {
-				el.createEl("div", { text: this.errors.get(t.line), cls: "scan_error"});
-			}
-
-			while (t.line > line) {
-				el.createEl("div", { text: "\n" });
-				el.createEl("span", { text: `${this.pad((line+1).toString(),3)}`, cls: "line_number"});
-				line++;
+			if (this.error.length > 0) {
+				el.createEl("div", { text: this.error, cls: "scan_error"});
 			}
 
 			if (t.type == TokenType.Ident) {
@@ -209,12 +162,6 @@ class Scanner {
 				el.createEl("span", { text: t.lexeme, cls: "number"});
 			} else if (t.type == TokenType.Str) {
 				el.createEl("span", { text: t.lexeme, cls: "string"});
-			} else if (t.type == TokenType.Ind) {
-				const s = this.pad("", t.literal);
-				el.createEl("span", { text: s, cls: "line_number"});
-			} else  if (t.type == TokenType.Det) {
-				const s = this.pad("", t.literal);
-				el.createEl("span", { text: s, cls: "line_number"});
 			} else {
 				el.createEl("span", { text: t.lexeme, cls: "punctuator"});
 			}
@@ -329,6 +276,8 @@ class Line {
 	result: number;
 	indent: number;	
 	has$: boolean;
+	scanner: Scanner;
+	row: number;
 
 	update() : number {
 		this.result = this.children.reduce((prev, node) => prev + node.update(), this.result);
@@ -341,8 +290,18 @@ class Line {
 	}
 
 	selfRender(row: any) {
-		row.createEl("td", { text: this.source } );
-		row.createEl("td", { text: this.resultString() } );
+		const line = row.createEl("td");
+		line.createEl("span", { text: (this.row > 0) ? this.row.toString() : "" , cls: "line_number"});
+		
+		const source = row.createEl("td");
+		if (this.scanner) {
+			const pad = " ".repeat(this.indent*4);
+			source.createEl("span", { text: pad, cls: "line_number"});
+			this.scanner.render(source);
+		}
+		
+		const result = row.createEl("td");
+		result.createEl("span", { text: this.resultString(), cls: "result" } );
 	}
 
 	render(body: any): void {
@@ -357,13 +316,14 @@ class Line {
 		}
 	}
 
-	constructor(source: string) {
+	constructor(source: string, row: number) {
 		this.source = source;
 		this.indent = 0;
 		this.children = new Array<Line>;
 		this.parent = null;
 		this.result = 0;
 		this.has$ = false;
+		this.row = row;
 
 		if (source === "") {
 			this.indent = -1;
@@ -378,6 +338,9 @@ class Line {
 			else 
 				break;
 		}
+
+		this.scanner = new Scanner(source);
+		this.scanner.scanTokens();
 
 		// split to words
 		const words = source.split(' ');
@@ -423,39 +386,18 @@ const DEFAULT_SETTINGS: SigmaPluginSettings = {
 export default class SigmaPlugin extends Plugin {
 	settings: SigmaPluginSettings;
 
-	process(source: string, root: any) {
-		const scanner = new Scanner(source);
-		scanner.scanTokens();
-		scanner.render(root);
-		return;
-		const pre = root.createEl("pre");
-		if (scanner.errors.length > 0) {
-			for (const e in scanner.errors) {
-				const text = scanner.errors[e];
-				pre.createEl("div", { text: text});
-			}
-		} else {
-			for (const t in scanner.tokens) {
-				const text = scanner.tokens[t].toString(); 
-				pre.createEl("div", { text: text});
-			}
-		}
-	}
-
 	async onload() {
 		await this.loadSettings();
 		this.registerMarkdownCodeBlockProcessor("sigma", (source, el, ctx) => {
-			this.process(source, el);
-			return;
 			const table = el.createEl("table");
 			const body = table.createEl("tbody");
 
-			let root = new Line("");
+			let root = new Line("", 0);
 			let currentNode = root;
 			const lines = source.split("\n").filter((row) => row.length > 0);
 			for (let i = 0; i < lines.length; i++) {
 				const line = lines[i];
-				const node = new Line(line);
+				const node = new Line(line, i+1);
 				if (node.indent <= currentNode.indent) {
 					// find closest parent with indent < node.indent
 					let par: Line | null = null;
