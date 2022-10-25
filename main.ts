@@ -224,7 +224,100 @@ class Scanner {
 }
 
 ////////////////////////////////////////////////// Parser //////////////////////////////////////////////
+class ParseNode {
+	token: number;
+	left: ParseNode|null;
+	right: ParseNode|null;
+	constructor(token: number, left: ParseNode|null, right: ParseNode|null) {
+		this.token = token;
+		this.left = left;
+		this.right = right;
+	}
+}
 
+class Parser {	
+	scanner: Scanner;
+	current: number = 0;
+
+	constructor(source: string) {
+		this.scanner = new Scanner(source);
+		this.scanner.scanTokens();
+	}
+
+	match(start: number, ...types: TokenType[]): ParseNode | null {
+		this.current = start;
+		for (const t in types) {
+			if (this.scanner.tokens[start].type == types[t]) {			
+				this.current++;
+				return new ParseNode(start, null, null);
+			}			
+		}
+		this.current = start;
+		return null;
+	}
+
+	primary(start: number): ParseNode | null {
+		this.current = start;
+		let node = this.match(start, TokenType.Num, TokenType.Str);
+		if (node) return node;
+		
+		if (this.match(start, TokenType.LPar)) {
+			node = this.expression(start);			
+			return this.match(this.current, TokenType.RPar);
+		}
+		this.current = start;
+		return null;
+	}
+
+	unary(start: number): ParseNode | null {
+		if (this.match(start, TokenType.Minus)) {
+			return this.unary(this.current);
+		}		
+		return this.primary(start);
+	}
+
+	factor(start: number): ParseNode | null {
+		this.current = start;
+		const left = this.unary(start);
+		if (left) {
+			const op = this.match(this.current, TokenType.Star, TokenType.Slash);
+			if (op) {
+				const right = this.unary(this.current);
+				if (right) {
+					op.left = left;
+					op.right = right;
+					return op;
+				}
+			}
+		}
+
+		this.current = start;
+		return null;
+	}
+
+	term(start: number): ParseNode | null {
+		this.current = start;
+		const left = this.factor(start);
+		if (left) {
+			const op = this.match(this.current, TokenType.Plus, TokenType.Minus);
+			if (op) {
+				const right = this.factor(this.current);
+				if (right) {
+					op.left = left;
+					op.right = right;
+					return op;
+				}
+			}
+		}
+
+		this.current = start;
+		return null;
+	}	
+
+	expression(start: number): ParseNode | null {
+		return this.term(start);
+	}	
+}
 
 /////////////////////////////////////////////// Interpreter ////////////////////////////////////////////
 
