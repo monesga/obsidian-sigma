@@ -1,9 +1,6 @@
 import { match } from 'assert';
 import { App, Notice, Plugin, PluginSettingTab, setIcon, Setting } from 'obsidian';
 
-
-// TODO: remove multi-line scanning, keep existing outline approach and table output
-
 ////////////////////////////////////////////////// Scanner //////////////////////////////////////////////
 enum TokenType { LPar, RPar, Comma, Dot,  Minus, Plus, Star, Slash, Semi, Equal, Ident, Num, Str, End }
 class Token { 
