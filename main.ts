@@ -73,9 +73,10 @@ class Scanner {
 			case " ": 
 			case "\t": 
 			case "\r": break;
+			case "$": break;
 			case "'": this.scanString(); break;
 			default: 
-				if (this.isDigit(c) || c == "$") {
+				if (this.isDigit(c)) {
 					this.scanNumber();
 				} else if (this.isAlphaNum(c)) {
 					this.scanWord();
@@ -144,8 +145,16 @@ class Scanner {
 		return this.source.charAt(this.current);
 	}
 
+	shouldSpace(index: any): boolean {
+		const next = parseInt(index) + 1;
+		if (next >= this.tokens.length) return false;
+		const t = this.tokens[next];
+		return t.type == TokenType.Num || t.type == TokenType.Ident || t.type == TokenType.LPar;
+	}
+
 	render(el: any) {
 		const pre = el.createEl("span");
+
 		for (const i in this.tokens) {			
 			const t = this.tokens[i];
 
@@ -155,6 +164,7 @@ class Scanner {
 
 			if (t.type == TokenType.Ident) {
 				el.createEl("span", { text: t.lexeme, cls: "identifier"});
+				if (this.shouldSpace(i)) el.createEl("span", { text: " " });
 			} else if (t.type == TokenType.Num) {
 				el.createEl("span", { text: t.lexeme, cls: "number"});
 			} else if (t.type == TokenType.Str) {
@@ -162,7 +172,6 @@ class Scanner {
 			} else {
 				el.createEl("span", { text: t.lexeme, cls: "punctuator"});
 			}
-			el.createEl("span", { text: " " });
 		}
 	}
 }
@@ -205,9 +214,13 @@ class Parser {
 		let node = this.match(start, TokenType.Num, TokenType.Str);
 		if (node) return node;
 		
-		if (this.match(start, TokenType.LPar)) {
-			node = this.expression(start);			
-			return this.match(this.current, TokenType.RPar);
+		if (this.match(this.current, TokenType.LPar)) {
+			node = this.expression(this.current);			
+			if (this.match(this.current, TokenType.RPar)) {
+				return node;
+			}
+			// syntax error
+			return null;
 		}
 		this.current = start;
 		return null;
@@ -226,13 +239,14 @@ class Parser {
 		if (left) {
 			const op = this.match(this.current, TokenType.Star, TokenType.Slash);
 			if (op) {
-				const right = this.unary(this.current);
+				const right = this.factor(this.current);
 				if (right) {
 					op.left = left;
 					op.right = right;
 					return op;
 				}
 			}
+			return left;
 		}
 
 		this.current = start;
@@ -245,25 +259,72 @@ class Parser {
 		if (left) {
 			const op = this.match(this.current, TokenType.Plus, TokenType.Minus);
 			if (op) {
-				const right = this.factor(this.current);
+				const right = this.term(this.current);
 				if (right) {
 					op.left = left;
 					op.right = right;
 					return op;
 				}
 			}
+			return left;
 		}
 
 		this.current = start;
 		return null;
 	}	
 
+	statement(start: number): ParseNode | null {
+		this.current = start;
+		const node = this.match(start, TokenType.Ident);
+
+		if (node) {
+			const eq = this.match(this.current, TokenType.Equal);
+			if (eq) {
+				eq.left = node;
+				eq.right = this.term(this.current);
+				return eq;
+			} else {
+				while (this.match(this.current, TokenType.Ident));
+			}
+		}
+		return this.term(this.current);
+	}
+
 	expression(start: number): ParseNode | null {
-		return this.term(start);
+		return this.statement(start);
 	}	
 }
 
 /////////////////////////////////////////////// Interpreter ////////////////////////////////////////////
+class Calc {
+	parser: Parser;
+
+	constructor(source: string) {
+		this.parser = new Parser(source);
+	}
+
+	run(node: ParseNode | null): any {
+		if (!node) return null;
+		let token = this.parser.scanner.tokens[node.token];
+		switch (token.type) {
+			case TokenType.Num:
+				return token.literal;
+			case TokenType.Str:
+				return token.literal;
+			case TokenType.Plus: return this.run(node.left) + this.run(node.right);
+			case TokenType.Minus: return this.run(node.left) - this.run(node.right);
+			case TokenType.Star: return this.run(node.left) * this.run(node.right);
+			case TokenType.Slash: return this.run(node.left) / this.run(node.right);
+			case TokenType.Ident: return 0;
+			default: return null;
+		}
+	}
+
+	exec(): any {
+		return this.run(this.parser.expression(0));
+	}
+
+}
 
 class Line {
 	children: Line[];
@@ -273,7 +334,7 @@ class Line {
 	result: number;
 	indent: number;	
 	has$: boolean;
-	scanner: Scanner;
+	calc: Calc;
 	row: number;
 
 	update() : number {
@@ -282,8 +343,8 @@ class Line {
 	}
 
 	resultString(): string {
-		return `${this.has$ ? "$" : ""}${this.result.toLocaleString().toString()}`;
-		
+		if (!this.result) return "0";		
+		return `${this.has$ ? "$" : ""}${this.result.toLocaleString().toString()}`;		
 	}
 
 	selfRender(row: any) {
@@ -291,10 +352,10 @@ class Line {
 		line.createEl("span", { text: (this.row > 0) ? this.row.toString() : "" , cls: "line_number"});
 		
 		const source = row.createEl("td");
-		if (this.scanner) {
+		if (this.calc?.parser?.scanner) {
 			const pad = " ".repeat(this.indent*4);
 			source.createEl("span", { text: pad, cls: "line_number"});
-			this.scanner.render(source);
+			this.calc.parser.scanner.render(source);
 		}
 		
 		const result = row.createEl("td");
@@ -336,37 +397,9 @@ class Line {
 				break;
 		}
 
-		this.scanner = new Scanner(source);
-		this.scanner.scanTokens();
-
-		// split to words
-		const words = source.split(' ');
-
-		// only one word, we're done
-		if (words.length <= 0) return;
-
-		// find last word
-		const last = words[words.length-1];
-		let expr = "";
-
-		// strip "$"
-		for (let i = 0; i < last.length; i++) {
-			const ch = last.charAt(i);
-			if (ch === "$") this.has$ = true;
-			if (ch !== "$" && ch !== "_") {
-					expr = expr + ch;
-				}
-		}
-
-		this.expression = expr;
-		if (this.expression.length > 0 ) {
-			try {
-				this.result = eval(this.expression);
-			} catch {
-				this.result = 0;
-			}
-			
-		}
+		this.calc = new Calc(source);	
+		this.result = this.calc.exec();
+		return;		
 	}
 }
 
