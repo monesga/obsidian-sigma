@@ -150,7 +150,7 @@ class Scanner {
 		const next = parseInt(index) + 1;
 		if (next >= this.tokens.length) return false;
 		const t = this.tokens[next];
-		return t.type == TokenType.Num || t.type == TokenType.Ident || t.type == TokenType.LPar;
+		return t.type == TokenType.Num || t.type == TokenType.Ident || t.type == TokenType.LPar || t.type == TokenType.Minus;
 	}
 
 	render(el: any) {
@@ -228,8 +228,13 @@ class Parser {
 	}
 
 	unary(start: number): ParseNode | null {
-		if (this.match(start, TokenType.Minus)) {
-			return this.unary(this.current);
+		const node = this.match(start, TokenType.Minus);
+		if (node) {
+			const expr = this.unary(this.current);
+			if (expr) {
+				node.left = expr;
+				return node;
+			}
 		}		
 		return this.primary(start);
 	}
@@ -331,7 +336,9 @@ class Calc {
 			case TokenType.Num: return token.literal;
 			case TokenType.Str: return token.literal;
 			case TokenType.Plus: return this.run(node.left) + this.run(node.right);
-			case TokenType.Minus: return this.run(node.left) - this.run(node.right);
+			case TokenType.Minus: 
+				if (!node.right) return - this.run(node.left);
+				return this.run(node.left) - this.run(node.right);
 			case TokenType.Star: return this.run(node.left) * this.run(node.right);
 			case TokenType.Slash: return this.run(node.left) / this.run(node.right);
 			case TokenType.Equal: return this.assign(node);
