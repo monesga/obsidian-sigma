@@ -1,5 +1,6 @@
-import { match } from 'assert';
+import { match, throws } from 'assert';
 import { App, Notice, Plugin, PluginSettingTab, setIcon, Setting } from 'obsidian';
+import { __assign } from 'tslib';
 
 ////////////////////////////////////////////////// Scanner //////////////////////////////////////////////
 enum TokenType { LPar, RPar, Comma, Dot,  Minus, Plus, Star, Slash, Semi, Equal, Ident, Num, Str, End }
@@ -211,7 +212,7 @@ class Parser {
 
 	primary(start: number): ParseNode | null {
 		this.current = start;
-		let node = this.match(start, TokenType.Num, TokenType.Str);
+		let node = this.match(start, TokenType.Num, TokenType.Str, TokenType.Ident);
 		if (node) return node;
 		
 		if (this.match(this.current, TokenType.LPar)) {
@@ -283,9 +284,10 @@ class Parser {
 				eq.left = node;
 				eq.right = this.term(this.current);
 				return eq;
-			} else {
-				while (this.match(this.current, TokenType.Ident));
-			}
+			} 
+			const exp = this.expression(this.current);
+			if (exp) return exp;
+			this.current = start;
 		}
 		return this.term(this.current);
 	}
@@ -296,26 +298,44 @@ class Parser {
 }
 
 /////////////////////////////////////////////// Interpreter ////////////////////////////////////////////
+interface CalcHost {
+	setVar(id: string, value: number): any;
+	getVar(id: string): any;
+}
+
 class Calc {
 	parser: Parser;
+	host: CalcHost;
 
-	constructor(source: string) {
+	constructor(source: string, host: CalcHost) {
 		this.parser = new Parser(source);
+		this.host = host;
+	}
+
+	getToken(index: number): Token {
+		return this.parser.scanner.tokens[index];
+	}
+
+	assign(node: ParseNode): number {
+		if (!node.left) return 0;
+		const result = this.run(node.right);
+		const token =  this.getToken(node.left.token);
+		this.host.setVar(token.lexeme, result);
+		return result;
 	}
 
 	run(node: ParseNode | null): any {
 		if (!node) return null;
 		let token = this.parser.scanner.tokens[node.token];
 		switch (token.type) {
-			case TokenType.Num:
-				return token.literal;
-			case TokenType.Str:
-				return token.literal;
+			case TokenType.Num: return token.literal;
+			case TokenType.Str: return token.literal;
 			case TokenType.Plus: return this.run(node.left) + this.run(node.right);
 			case TokenType.Minus: return this.run(node.left) - this.run(node.right);
 			case TokenType.Star: return this.run(node.left) * this.run(node.right);
 			case TokenType.Slash: return this.run(node.left) / this.run(node.right);
-			case TokenType.Ident: return 0;
+			case TokenType.Equal: return this.assign(node);
+			case TokenType.Ident: return this.host.getVar(this.getToken(node.token).lexeme);
 			default: return null;
 		}
 	}
@@ -327,6 +347,7 @@ class Calc {
 }
 
 class Line {
+	host: CalcHost;
 	children: Line[];
 	parent: Line | null;
 	source: string;
@@ -374,7 +395,8 @@ class Line {
 		}
 	}
 
-	constructor(source: string, row: number) {
+	constructor(source: string, row: number, host: CalcHost) {
+		this.host = host;
 		this.source = source;
 		this.indent = 0;
 		this.children = new Array<Line>;
@@ -397,7 +419,7 @@ class Line {
 				break;
 		}
 
-		this.calc = new Calc(source);	
+		this.calc = new Calc(source, host);	
 		this.result = this.calc.exec();
 		return;		
 	}
@@ -413,7 +435,18 @@ const DEFAULT_SETTINGS: SigmaPluginSettings = {
 }
 
 
-export default class SigmaPlugin extends Plugin {
+export default class SigmaPlugin extends Plugin implements CalcHost {
+	variables = new Map<string, any>();
+
+	setVar(id: string, value: number) {
+		this.variables.set(id, value)	;
+	}
+
+	getVar(id: string) {
+		if (!this.variables.has(id)) return 0;
+		return this.variables.get(id);
+	}
+
 	settings: SigmaPluginSettings;
 
 	async onload() {
@@ -422,12 +455,12 @@ export default class SigmaPlugin extends Plugin {
 			const table = el.createEl("table");
 			const body = table.createEl("tbody");
 
-			let root = new Line("", 0);
+			let root = new Line("", 0, this);
 			let currentNode = root;
 			const lines = source.split("\n").filter((row) => row.length > 0);
 			for (let i = 0; i < lines.length; i++) {
 				const line = lines[i];
-				const node = new Line(line, i+1);
+				const node = new Line(line, i+1, this);
 				if (node.indent <= currentNode.indent) {
 					// find closest parent with indent < node.indent
 					let par: Line | null = null;
