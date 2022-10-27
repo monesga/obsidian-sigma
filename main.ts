@@ -367,7 +367,6 @@ class Line {
 
 	updatLineVar() {
 		const name = `Line${this.row}`;
-		console.log(`${name} = ${this.result}`);
 		this.host.setVar(name, this.result);
 	}
 
