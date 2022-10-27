@@ -456,13 +456,8 @@ export default class SigmaPlugin extends Plugin implements CalcHost {
 
 	settings: SigmaPluginSettings;
 
-	async onload() {
-		await this.loadSettings();
-		this.registerMarkdownCodeBlockProcessor("sigma", (source, el, ctx) => {
-			const table = el.createEl("table");
-			const body = table.createEl("tbody");
-
-			let root = new Line("", 0, this);
+	process(source: string): Line {
+		let root = new Line("", 0, this);
 			let currentNode = root;
 			const lines = source.split("\n").filter((row) => row.length > 0);
 			for (let i = 0; i < lines.length; i++) {
@@ -483,6 +478,16 @@ export default class SigmaPlugin extends Plugin implements CalcHost {
 			}
 
 			root.update();
+			return root;
+	}
+
+	async onload() {
+		await this.loadSettings();
+		this.registerMarkdownCodeBlockProcessor("sigma", (source, el, ctx) => {
+			const root = this.process(source);
+
+			const table = el.createEl("table");
+			const body = table.createEl("tbody");
 			if (root.children.length === 1)
 				root.children[0].render(body);
 			else 
@@ -491,8 +496,7 @@ export default class SigmaPlugin extends Plugin implements CalcHost {
 
 		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
 		const statusBarItemEl = this.addStatusBarItem();
-		setIcon(statusBarItemEl, 'lines-of-text');
-		// statusBarItemEl.setText('Σ');
+		statusBarItemEl.setText('Σ');
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new SigmaSettingsTab(this.app, this));

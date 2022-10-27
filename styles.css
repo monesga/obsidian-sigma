@@ -8,42 +8,78 @@ If your plugin does not need CSS, delete this file.
 */
 
 .identifier {
-  color: green;
   font-family: 'Menlo', monospace;
   font-size: smaller;
+}
+
+.theme-dark .identifier {
+  color: lightgreen;
+} 
+
+.theme-light .identifier {
+  color: green;
 }
 
 .number {
-  color: blue;
   font-family: 'Menlo', monospace;
   font-size: smaller;
+}
+
+.theme-dark .number {
+  color: lightblue;
+}
+
+.theme-light .number {
+  color: blue;
 }
 
 .punctuator {
-  color: darkred;
   font-family: 'Menlo', monospace;
   font-size: smaller;
 }
 
+.theme-dark .punctuator {
+  color: lightcoral;
+}
+
+.theme-light .punctuator {
+  color: darkred;
+}
+
 .string {
-  color: blueviolet;
+  color: var(--purple);
   font-family: 'Menlo', monospace;
   font-size: smaller;
 }
 
 .line_number {
-  color: lightgray;
   font-family: 'Menlo', monospace;
   font-size: small;
   display: inline;
   white-space: pre;
 }
 
+.theme-dark .line_number {
+  color: darkgrey;
+}
+
+.theme-light .line_number {
+  color: lightgrey;
+}
+
 .result {
-  color: grey;
+  color: var(--text);
   font-family: 'Menlo', monospace;
   font-size: smaller;
   display: inline;
+}
+
+.theme-dark .result {
+  color: #b7b7b7;
+}
+
+.theme-light .result {
+  color: #747474;
 }
 
 .scan_error {
