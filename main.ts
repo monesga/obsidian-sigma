@@ -365,11 +365,17 @@ class Line {
 	calc: Calc;
 	row: number;
 
-	update() : number {
-		this.result = this.children.reduce((prev, node) => prev + node.update(), this.result);
-		return this.result;
+	updatLineVar() {
+		const name = `Line${this.row}`;
+		console.log(`${name} = ${this.result}`);
+		this.host.setVar(name, this.result);
 	}
 
+	update(plus: number)  {
+			this.result += plus;
+			this.updatLineVar();	
+	}
+	
 	resultString(): string {
 		if (!this.result) return "0";		
 		return `${this.has$ ? "$" : ""}${this.result.toLocaleString().toString()}`;		
@@ -428,6 +434,7 @@ class Line {
 
 		this.calc = new Calc(source, host);	
 		this.result = this.calc.exec();
+		this.updatLineVar();
 		return;		
 	}
 }
@@ -472,12 +479,15 @@ export default class SigmaPlugin extends Plugin implements CalcHost {
 					node.parent = currentNode;
 				}
 				node.parent.children.push(node);
+				for(let par = node.parent; par; par = par.parent) {
+					par.update(node.result);
+				}
+				
 				if (node.parent)
 					node.parent.has$ = node.has$;
 				currentNode = node;
 			}
 
-			root.update();
 			return root;
 	}
 
