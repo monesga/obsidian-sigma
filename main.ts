@@ -212,6 +212,10 @@ class Parser {
 
 	primary(start: number): ParseNode | null {
 		this.current = start;
+
+		let call = this.call(start);
+		if (call) return call;
+
 		let node = this.match(start, TokenType.Num, TokenType.Str, TokenType.Ident);
 		if (node) return node;
 		
@@ -225,6 +229,17 @@ class Parser {
 		}
 		this.current = start;
 		return null;
+	}
+
+	arguments(start: number): ParseNode | null {
+		const node = this.expression(start);
+		if (!node) return null;
+		const comma = this.match(this.current, TokenType.Comma);
+		if (comma) {
+			comma.left = node;
+			comma.right = this.arguments(this.current);
+		}
+		return node;
 	}
 
 	unary(start: number): ParseNode | null {
@@ -279,7 +294,26 @@ class Parser {
 		return null;
 	}	
 
+	call(start: number): ParseNode | null {
+		this.current = start;
+		const id = this.match(start, TokenType.Ident);
+		if (id) {
+			const lpar = this.match(this.current, TokenType.LPar);
+			if (lpar) {
+				lpar.left = id;
+				lpar.right = this.arguments(this.current);
+				this.match(this.current, TokenType.RPar);
+				return lpar;
+			}
+		}
+		this.current = start;
+		return null;
+	}
+
 	statement(start: number): ParseNode | null {
+		const call = this.call(start);
+		if (call) return call;
+
 		this.current = start;
 		const node = this.match(start, TokenType.Ident);
 
@@ -290,6 +324,7 @@ class Parser {
 				eq.right = this.term(this.current);
 				return eq;
 			} 
+
 			const exp = this.expression(this.current);
 			if (exp) return exp;
 			this.current = start;
@@ -329,6 +364,15 @@ class Calc {
 		return result;
 	}
 
+	call(node: ParseNode) {
+		if (!node.left) return 0;
+		const fname = this.parser.scanner.tokens[node.left.token].lexeme;
+		switch (fname) {
+			case "sin":
+				return Math.sin(this.run(node.right));
+		}
+	}
+
 	run(node: ParseNode | null): any {
 		if (!node) return null;
 		let token = this.parser.scanner.tokens[node.token];
@@ -343,6 +387,7 @@ class Calc {
 			case TokenType.Slash: return this.run(node.left) / this.run(node.right);
 			case TokenType.Equal: return this.assign(node);
 			case TokenType.Ident: return this.host.getVar(this.getToken(node.token).lexeme);
+			case TokenType.LPar: return this.call(node);
 			default: return null;
 		}
 	}
