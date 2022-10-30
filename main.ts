@@ -368,8 +368,13 @@ class Calc {
 		if (!node.left) return 0;
 		const fname = this.parser.scanner.tokens[node.left.token].lexeme;
 		switch (fname) {
-			case "sin":
-				return Math.sin(this.run(node.right));
+			case "sin": return Math.sin(this.run(node.right));
+			case "cos": return Math.cos(this.run(node.right));
+			case "tan": return Math.tan(this.run(node.right));
+			case "asin": return Math.asin(this.run(node.right));
+			case "acos": return Math.acos(this.run(node.right));
+			case "atan": return Math.atan(this.run(node.right));
+			case "abs": return Math.abs(this.run(node.right));
 		}
 	}
 
