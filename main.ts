@@ -3,7 +3,7 @@ import { App, Notice, Plugin, PluginSettingTab, setIcon, Setting } from 'obsidia
 import { __assign } from 'tslib';
 
 ////////////////////////////////////////////////// Scanner //////////////////////////////////////////////
-enum TokenType { LPar, RPar, Comma, Dot,  Minus, Plus, Star, Slash, Semi, Equal, Ident, Num, Str, End }
+enum TokenType { LPar, RPar, Comma, Dot,  Minus, Plus, Star, Slash, Semi, Equal, Ident, Num, Str, Colon, End }
 class Token { 
 	type: TokenType;
 	lexeme: string;
@@ -71,6 +71,7 @@ class Scanner {
 			case "*": this.addToken(TokenType.Star); break;
 			case ";": this.addToken(TokenType.Semi); break;
 			case "=": this.addToken(TokenType.Equal); break;
+			case ":": this.addToken(TokenType.Colon); break;
 			case " ": 
 			case "\t": 
 			case "\r": break;
@@ -163,7 +164,9 @@ class Scanner {
 				el.createEl("div", { text: this.error, cls: "scan_error"});
 			}
 
-			if (t.type == TokenType.Ident) {
+			if (t.type == TokenType.Colon) {
+				el.createEl("span", { text: ": ", cls: "punctuator"});
+			} else if (t.type == TokenType.Ident) {
 				el.createEl("span", { text: t.lexeme, cls: "identifier"});
 				if (this.shouldSpace(i)) el.createEl("span", { text: " " });
 			} else if (t.type == TokenType.Num) {
@@ -216,6 +219,16 @@ class Parser {
 		let call = this.call(start);
 		if (call) return call;
 
+		let ident = this.match(start, TokenType.Ident); 
+		if (ident) {
+			const eq = this.match(this.current, TokenType.Equal, TokenType.Colon);
+			if (eq) {
+				eq.left = ident;
+				eq.right = this.expression(this.current);
+				return eq;
+			}			
+			this.current = start;
+		}
 		let node = this.match(start, TokenType.Num, TokenType.Str, TokenType.Ident);
 		if (node) return node;
 		
@@ -238,6 +251,7 @@ class Parser {
 		if (comma) {
 			comma.left = node;
 			comma.right = this.arguments(this.current);
+			return comma;
 		}
 		return node;
 	}
@@ -311,32 +325,6 @@ class Parser {
 	}
 
 	statement(start: number): ParseNode | null {
-		const call = this.call(start);
-		if (call) {
-			// See issue #11
-			const op = this.match(this.current, TokenType.Plus, TokenType.Minus, TokenType.Slash, TokenType.Star);
-			if (op) {
-				this.current = start;
-				return this.term(start);
-			}
-			return call;
-		}
-
-		this.current = start;
-		const node = this.match(start, TokenType.Ident);
-
-		if (node) {
-			const eq = this.match(this.current, TokenType.Equal);
-			if (eq) {
-				eq.left = node;
-				eq.right = this.term(this.current);
-				return eq;
-			} 
-
-			const exp = this.expression(this.current);
-			if (exp) return exp;
-			this.current = start;
-		}
 		return this.term(this.current);
 	}
 
@@ -373,6 +361,24 @@ class Calc {
 		return result;
 	}
 
+	clamp(node: ParseNode) {
+		let value = 0;
+		let min = 0;
+		let max = 0;
+		if (node) {
+			if (node.right) {
+				value = this.run(node.right.left);
+				if (node.right.right) {
+					min = this.run(node.right.right.left);
+					if (node.right.right.right) {
+						max = this.run(node.right.right.right);
+					}
+				}
+			}
+		} 
+		return Math.min(Math.max(value, min), max);
+	}
+
 	call(node: ParseNode) {
 		if (!node.left) return 0;
 		const fname = this.parser.scanner.tokens[node.left.token].lexeme;
@@ -384,6 +390,7 @@ class Calc {
 			case "acos": return Math.acos(this.run(node.right));
 			case "atan": return Math.atan(this.run(node.right));
 			case "abs": return Math.abs(this.run(node.right));
+			case "clamp": return this.clamp(node);
 		}
 	}
 
@@ -400,6 +407,7 @@ class Calc {
 			case TokenType.Star: return this.run(node.left) * this.run(node.right);
 			case TokenType.Slash: return this.run(node.left) / this.run(node.right);
 			case TokenType.Equal: return this.assign(node);
+			case TokenType.Colon: return this.run(node.right);
 			case TokenType.Ident: return this.host.getVar(this.getToken(node.token).lexeme);
 			case TokenType.LPar: return this.call(node);
 			default: return null;
