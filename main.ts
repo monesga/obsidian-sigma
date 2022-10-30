@@ -312,7 +312,15 @@ class Parser {
 
 	statement(start: number): ParseNode | null {
 		const call = this.call(start);
-		if (call) return call;
+		if (call) {
+			// See issue #11
+			const op = this.match(this.current, TokenType.Plus, TokenType.Minus, TokenType.Slash, TokenType.Star);
+			if (op) {
+				this.current = start;
+				return this.term(start);
+			}
+			return call;
+		}
 
 		this.current = start;
 		const node = this.match(start, TokenType.Ident);
