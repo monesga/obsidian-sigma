@@ -508,6 +508,7 @@ export default class SigmaPlugin extends Plugin implements CalcHost {
 	settings: SigmaPluginSettings;
 
 	process(source: string): Line {
+		this.variables.clear();
 		let root = new Line("", 0, this);
 			let currentNode = root;
 			const lines = source.split("\n").filter((row) => row.length > 0);
