@@ -349,6 +349,7 @@ class Parser {
 interface CalcHost {
 	setVar(id: string, value: number): any;
 	getVar(id: string): any;
+	format(value: number): string;
 }
 
 class Calc {
@@ -435,7 +436,7 @@ class Line {
 	
 	resultString(): string {
 		if (!this.result) return "0";		
-		return `${this.has$ ? "$" : ""}${this.result.toLocaleString().toString()}`;		
+		return `${this.has$ ? "$" : ""}${this.host.format(this.result)}`;		
 	}
 
 	selfRender(row: any) {
@@ -498,11 +499,11 @@ class Line {
 
 
 interface SigmaPluginSettings {
-	mySetting: string;
+	format: boolean;
 }
 
 const DEFAULT_SETTINGS: SigmaPluginSettings = {
-	mySetting: 'default'
+	format: true
 }
 
 
@@ -516,6 +517,12 @@ export default class SigmaPlugin extends Plugin implements CalcHost {
 	getVar(id: string) {
 		if (!this.variables.has(id)) return 0;
 		return this.variables.get(id);
+	}
+
+	format(value: number): string {
+		const str =  value.toLocaleString();
+		if (this.settings.format) return str;
+		return str.replace(/,/g, "");
 	}
 
 	settings: SigmaPluginSettings;
@@ -596,18 +603,18 @@ class SigmaSettingsTab extends PluginSettingTab {
 
 		containerEl.empty();
 
-		containerEl.createEl('h2', {text: 'Settings for my awesome plugin.'});
+		containerEl.createEl('h2', {text: 'Sigma Settings'});
 
 		new Setting(containerEl)
-			.setName('Setting #1')
-			.setDesc('It\'s a secret')
-			.addText(text => text
-				.setPlaceholder('Enter your secret')
-				.setValue(this.plugin.settings.mySetting)
+			.setName('Format result')
+			.setDesc('Show comma separators for results')
+			.addToggle(toggle => {
+				toggle
+				.setValue(this.plugin.settings.format)
 				.onChange(async (value) => {
-					console.log('Secret: ' + value);
-					this.plugin.settings.mySetting = value;
+					this.plugin.settings.format = value;
 					await this.plugin.saveSettings();
-				}));
+				})
+			})
 	}
 }
