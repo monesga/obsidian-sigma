@@ -221,12 +221,18 @@ class Parser {
 
 		let ident = this.match(start, TokenType.Ident); 
 		if (ident) {
+			const temp = this.current;
 			const eq = this.match(this.current, TokenType.Equal, TokenType.Colon);
 			if (eq) {
 				eq.left = ident;
 				eq.right = this.expression(this.current);
 				return eq;
-			}			
+			}
+			// <identifier1> <identifier2> = skip <identifier1>
+			const nextId = this.match(this.current, TokenType.Ident);
+			if (nextId) {
+				return this.primary(temp);
+			} 
 			this.current = start;
 		}
 		let node = this.match(start, TokenType.Num, TokenType.Str, TokenType.Ident);
