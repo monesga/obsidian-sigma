@@ -12,7 +12,7 @@ Sigma is a plugin to enable using blocks within a note as calculation sheets.
 - Built in scientific functions
 - Control over output number formatting
 - Output in clean HTML tables for easy sharing
-- Syntax coloring for expressions in output
+- Syntax coloring for expressions in output including dark theme
 - Supported on desktop and mobile
 
 ## Usages
