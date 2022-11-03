@@ -4,7 +4,7 @@
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
 	"description": "A plugin to enable using obsidian notes as calculation sheets.",
-	"author": "Velentir",
+	"author": "monesga",
 	"authorUrl": "https://github.com/velentir/obsidian-sigma",
 	"isDesktopOnly": false
 }
