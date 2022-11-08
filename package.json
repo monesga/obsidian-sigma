@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-sigma",
-	"version": "1.0.1",
+	"version": "1.0.2s",
 	"description": "A plugin to enable using obsidian notes as calculation sheets.",
 	"main": "main.js",
 	"scripts": {

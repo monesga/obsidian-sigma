@@ -8,7 +8,7 @@ If your plugin does not need CSS, delete this file.
 */
 
 .identifier {
-  font-family: 'Menlo', monospace;
+  font-family: 'Menlo', 'Consolas', monospace;
   font-size: smaller;
 }
 
@@ -21,7 +21,7 @@ If your plugin does not need CSS, delete this file.
 }
 
 .number {
-  font-family: 'Menlo', monospace;
+  font-family: 'Menlo', 'Consolas', monospace;
   font-size: smaller;
 }
 
@@ -34,7 +34,7 @@ If your plugin does not need CSS, delete this file.
 }
 
 .punctuator {
-  font-family: 'Menlo', monospace;
+  font-family: 'Menlo', 'Consolas', monospace;
   font-size: smaller;
 }
 
@@ -48,12 +48,12 @@ If your plugin does not need CSS, delete this file.
 
 .string {
   color: var(--purple);
-  font-family: 'Menlo', monospace;
+  font-family: 'Menlo', 'Consolas', monospace;
   font-size: smaller;
 }
 
 .line_number {
-  font-family: 'Menlo', monospace;
+  font-family: 'Menlo', 'Consolas', monospace;
   font-size: small;
   display: inline;
   white-space: pre;
@@ -69,7 +69,7 @@ If your plugin does not need CSS, delete this file.
 
 .result {
   color: var(--text);
-  font-family: 'Menlo', monospace;
+  font-family: 'Menlo', 'Consolas', monospace;
   font-size: smaller;
   display: inline;
 }
@@ -84,7 +84,7 @@ If your plugin does not need CSS, delete this file.
 
 .scan_error {
   color: red;
-  font-family: 'Menlo', monospace;
+  font-family: 'Menlo', 'Consolas', monospace;
   font-size: smaller;
 }
 
