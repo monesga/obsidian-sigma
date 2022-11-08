@@ -274,44 +274,42 @@ class Parser {
 		return this.primary(start);
 	}
 
-	factor(start: number): ParseNode | null {
+
+	term_factor(start: number, method: any, type1: any, type2: any): ParseNode | null {
 		this.current = start;
-		const left = this.unary(start);
-		if (left) {
-			const op = this.match(this.current, TokenType.Star, TokenType.Slash);
-			if (op) {
-				const right = this.factor(this.current);
-				if (right) {
-					op.left = left;
-					op.right = right;
-					return op;
-				}
-			}
+		let left = method.apply(this, [start, type1, type2]);
+		let op: ParseNode|null = null;
+
+		if (!left) {
+			this.current = start;
+			return op;
+		}
+
+		op = this.match(this.current, type1, type2);
+		if (!op) {
 			return left;
 		}
 
-		this.current = start;
-		return null;
+		while (op) {
+			const un = method.apply(this, [this.current, type1, type2]);
+			if (!un) {
+				this.current = start;
+				return null;
+			}			
+			op.left = left;
+			op.right = un;
+			left = op;
+			op = this.match(this.current, type1, type2);
+		}
+		return left;
+	}
+
+	factor(start: number): ParseNode | null {
+		return this.term_factor(start, this.unary, TokenType.Star, TokenType.Slash);
 	}
 
 	term(start: number): ParseNode | null {
-		this.current = start;
-		const left = this.factor(start);
-		if (left) {
-			const op = this.match(this.current, TokenType.Plus, TokenType.Minus);
-			if (op) {
-				const right = this.term(this.current);
-				if (right) {
-					op.left = left;
-					op.right = right;
-					return op;
-				}
-			}
-			return left;
-		}
-
-		this.current = start;
-		return null;
+		return this.term_factor(start, this.factor, TokenType.Plus, TokenType.Minus);
 	}	
 
 	call(start: number): ParseNode | null {
