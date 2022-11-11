@@ -581,10 +581,6 @@ export default class SigmaPlugin extends Plugin implements CalcHost {
 				root.render(body);
 		});
 
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Σ');
-
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new SigmaSettingsTab(this.app, this));
 	}
