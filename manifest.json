@@ -1,6 +1,6 @@
 {
 	"id": "sigma",
-	"name": "Obsidian Sigma",
+	"name": "Sigma",
 	"version": "1.0.3",
 	"minAppVersion": "0.15.0",
 	"description": "A plugin to enable using obsidian notes as calculation sheets.",
