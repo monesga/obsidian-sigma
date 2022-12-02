@@ -24,7 +24,6 @@ Sigma is a plugin to enable using blocks within a note as calculation sheets.
 
 ## Installation
 - Install the Sigma plugin from the Obsidian community plugins list
-- Or manually copy all the files in the latest release into: `<vault>/.obsidian/plugins/obsidian-sigma`
 
 ## Guide
 - Use a code block (3 backquote characters) with a type sigma
