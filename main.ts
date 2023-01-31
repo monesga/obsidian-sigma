@@ -310,7 +310,7 @@ class Parser {
 	}
 
 	term(start: number): ParseNode | null {
-		return this.term_factor(start, this.factor, TokenType.Plus, TokenType.Minus, undefined);
+		return this.term_factor(start, this.factor, TokenType.Plus, TokenType.Minus);
 	}	
 
 	call(start: number): ParseNode | null {
