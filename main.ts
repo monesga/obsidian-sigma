@@ -80,12 +80,9 @@ class Scanner {
 			default: 
 				if (this.isDigit(c)) {
 					this.scanNumber();
-				} else if (this.isAlphaNum(c)) {
+				} else {
 					this.scanWord();
 				}
-				else {
-					this.error = `unexpected character '${c}'`;
-			}
 		}
 	}
 
