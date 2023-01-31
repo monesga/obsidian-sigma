@@ -3,7 +3,7 @@ import { App, Notice, Plugin, PluginSettingTab, setIcon, Setting } from 'obsidia
 import { __assign } from 'tslib';
 
 ////////////////////////////////////////////////// Scanner //////////////////////////////////////////////
-enum TokenType { LPar, RPar, Comma, Dot,  Minus, Plus, Star, Slash, Semi, Equal, Ident, Num, Str, Colon, End }
+enum TokenType { LPar, RPar, Comma, Dot,  Minus, Plus, Star, Slash, Semi, Equal, Ident, Num, Str, Colon, End, Power }
 class Token { 
 	type: TokenType;
 	lexeme: string;
@@ -72,6 +72,7 @@ class Scanner {
 			case ";": this.addToken(TokenType.Semi); break;
 			case "=": this.addToken(TokenType.Equal); break;
 			case ":": this.addToken(TokenType.Colon); break;
+			case "^": this.addToken(TokenType.Power); break;
 			case " ": 
 			case "\t": 
 			case "\r": break;
@@ -275,9 +276,9 @@ class Parser {
 	}
 
 
-	term_factor(start: number, method: any, type1: any, type2: any): ParseNode | null {
+	term_factor(start: number, method: any, ...types: TokenType[]): ParseNode | null {
 		this.current = start;
-		let left = method.apply(this, [start, type1, type2]);
+		let left = method.apply(this, [start, ...types]);
 		let op: ParseNode|null = null;
 
 		if (!left) {
@@ -285,13 +286,13 @@ class Parser {
 			return op;
 		}
 
-		op = this.match(this.current, type1, type2);
+		op = this.match(this.current, ...types);
 		if (!op) {
 			return left;
 		}
 
 		while (op) {
-			const un = method.apply(this, [this.current, type1, type2]);
+			const un = method.apply(this, [this.current, ...types]);
 			if (!un) {
 				this.current = start;
 				return null;
@@ -299,13 +300,13 @@ class Parser {
 			op.left = left;
 			op.right = un;
 			left = op;
-			op = this.match(this.current, type1, type2);
+			op = this.match(this.current, ...types);
 		}
 		return left;
 	}
 
 	factor(start: number): ParseNode | null {
-		return this.term_factor(start, this.unary, TokenType.Star, TokenType.Slash);
+		return this.term_factor(start, this.unary, TokenType.Star, TokenType.Slash, TokenType.Power);
 	}
 
 	term(start: number): ParseNode | null {
@@ -394,6 +395,7 @@ class Calc {
 			case "acos": return Math.acos(this.run(node.right));
 			case "atan": return Math.atan(this.run(node.right));
 			case "abs": return Math.abs(this.run(node.right));
+			case "sqrt": return Math.sqrt(this.run(node.right));
 			case "clamp": return this.clamp(node);
 		}
 	}
@@ -414,6 +416,7 @@ class Calc {
 			case TokenType.Colon: return this.run(node.right);
 			case TokenType.Ident: return this.host.getVar(this.getToken(node.token).lexeme);
 			case TokenType.LPar: return this.call(node);
+			case TokenType.Power: return Math.pow(this.run(node.left), this.run(node.right));
 			default: return null;
 		}
 	}
