@@ -452,8 +452,11 @@ class Line {
 	}
 
 	selfRender(row: any) {
-		const line = row.createEl("td");
-		line.createEl("span", { text: (this.row > 0) ? this.row.toString() : "" , cls: "line_number"});
+		
+		if (this.host.settings.rowIndex) {
+			const line = row.createEl("td");
+			line.createEl("span", { text: (this.row > 0) ? this.row.toString() : "" , cls: "line_number"});
+		}
 		
 		const source = row.createEl("td");
 		if (this.calc?.parser?.scanner) {
@@ -512,10 +515,12 @@ class Line {
 
 interface SigmaPluginSettings {
 	format: boolean;
+	rowIndex: boolean;
 }
 
 const DEFAULT_SETTINGS: SigmaPluginSettings = {
-	format: true
+	format: true,
+	rowIndex: true
 }
 
 
@@ -624,5 +629,18 @@ class SigmaSettingsTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				})
 			})
+
+		new Setting(containerEl)
+			.setName('Row Index Column')
+			.setDesc('First Column shows the row number')
+			.addToggle(toggle => {
+				toggle
+				.setValue(this.plugin.settings.rowIndex)
+				.onChange(async (value) => {
+					this.plugin.settings.rowIndex = value;
+					await this.plugin.saveSettings();
+				})
+			})
+
 	}
 }
